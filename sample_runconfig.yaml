@@ -1,0 +1,24 @@
+data_directory: /data
+# bootstrap_model_file: /model.pth  # This is not currently usable. Must be fixed in run.py
+model_type: ModelClassName
+loss_function: F.mse_loss
+epochs: 10
+batch_size: 24
+checkpoint_interval: 3600  # This is in seconds
+model_parameters: {}
+train_data_loader_type: TrainDataLoaderType
+test_data_loader_type: TestDataLoaderType
+eval_data_loader_type: EvalDataLoaderType
+data_loader_parameters:
+  all: {}
+  train: {}
+  test: {}
+  eval: {}
+description: "A helpful description which will be saved alongside the results"
+# The following parameters can be used to enable multigpu training.
+# multigpu_parameters:
+#   ngpus_per_node: 8  # This is the number of gpus per machine. As of now, the code is only set up for single node, multigpu.
+#   backend: nccl
+#   node_idx: 0
+#   num_nodes: 1
+#   url: tcp://127.0.0.1:12344

@@ -1,0 +1,3 @@
+[submodule "Pointnet2_PyTorch"]
+	path = submodules/Pointnet2_PyTorch
+	url = https://github.com/fishyai/Pointnet2_PyTorch
