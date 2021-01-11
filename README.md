@@ -44,6 +44,11 @@ If you don't care about having three phases in the model, you can disable the mo
  in [`train.py`](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/train.py).
 I realize this is pretty yucky, and will make it a little more user friendly at some point if other people decide to use this library.
 
+### Logging
+This is all managed through the (logging.py)[https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/logging.py] file. Checkpoints with limited metrics are made every so often (as indicated in the config), as well as after each epoch. 
+
+All data will be logged in the top level directory in a folder called `logs`. Within this directory, there will be a subdirectory for that experiment's model type and then a subdirectory in there for your specific experiment (based on the time the experiment was started). In this directory, there will be tensorboard info, a model checkpoint, and the modified config file that you can use to rerun your experiment.
+
 ### Multithreading
 In the `sample_runconfig.yaml`, [the multigpu arguments are commented out](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/sample_runconfig.yaml#L18). 
 In order to train in a multigpu environment, you can just uncomment these out. Be sure to set the number of GPUs correctly! There is some magic in the dataloader class which will turn your dataloader into a multigpu dataloader. 
