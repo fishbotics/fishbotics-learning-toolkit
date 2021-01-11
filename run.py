@@ -138,7 +138,7 @@ def edit_config(config, find_replace, modify_pairs, delete_keys):
         assert len(find_replace) % 2 == 0, "Replacements must be given as pairs"
         for i in range(len(find_replace) // 2):
             find_replace_dict[find_replace[2 * i]] = find_replace[2 * i + 1]
-        config = utils.replace_config_paths(config, find_replace_dict)
+        config = utils.find_replace_config_strings(config, find_replace_dict)
     if modify_pairs:
         assert len(modify_pairs) % 2 == 0, "Replacements must be given as pairs"
         for i in range(len(modify_pairs) // 2):
