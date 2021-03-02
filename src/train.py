@@ -20,7 +20,7 @@ class Trainer:
         self.checkpoint_time = None  # Initialized in the run function
         self.multigpu = multigpu
 
-    def fit(self, train_dl, test_dl, eval_dl, config):
+    def fit(self, train_dl, config, test_dl=None, eval_dl=None):
         if self.multigpu:
             mp.spawn(
                 Trainer._run_worker,
@@ -86,44 +86,42 @@ class Trainer:
         )
         opt = mdl.optimizer(ddp_mdl.parameters())
         train_dl = distribute_dataloader(train_dl, world_size, global_gpu_id)
-        test_dl = distribute_dataloader(test_dl, world_size, global_gpu_id)
-        eval_dl = distribute_dataloader(eval_dl, world_size, global_gpu_id)
+        if test_dl is not None:
+            test_dl = distribute_dataloader(test_dl, world_size, global_gpu_id)
+        if eval_dl is not None:
+            eval_dl = distribute_dataloader(eval_dl, world_size, global_gpu_id)
         if gpu_id == 0:
             sample_input = next(train_dl.__iter__())
             Trainer.summarize(mdl, sample_input, 0)
         for epoch in range(config.epochs):
             train_dl.sampler.set_epoch(epoch)
-            test_dl.sampler.set_epoch(epoch)
-            eval_dl.sampler.set_epoch(epoch)
-            train_loss = Trainer.train_loop(
-                mdl,
-                opt,
-                epoch,
-                train_dl,
-                loss_func,
-                logger,
-                config,
-            )
+            if test_dl is not None:
+                test_dl.sampler.set_epoch(epoch)
+            if eval_dl is not None:
+                eval_dl.sampler.set_epoch(epoch)
+            train_loss = Trainer.train_loop(mdl, opt, epoch, train_dl, loss_func, logger, config)
             if gpu_id == 0:
-                test_loss = self.test_loop(mdl, epoch, test_dl, config)
-                eval_loss = Trainer.evaluation_loop(
-                    mdl,
-                    epoch,
-                    eval_dl,
-                    loss_func,
-                    logger,
-                    config,
-                )
+                save_info = {
+                    'train_loss': train_loss,
+                }
+                if test_dl is not None:
+                    save_info['test_loss'] = Trainer.test_loop(mdl, epoch, test_dl, loss_func, logger, config)
+                if eval_dl is not None:
+                    save_info['eval_loss'] = Trainer.evaluation_loop(mdl, epoch, eval_dl, loss_func, logger, config)
+
+                if 'eval_loss' in save_info:
+                    metric = save_info['eval_loss']
+                elif 'test_loss' in save_info:
+                    metric = save_info['test_loss']
+                else:
+                    metric = save_info['train_loss']
+
                 logger.save_model(
                     epoch,
                     mdl,
                     opt,
-                    save_info={
-                        'train_loss': train_loss,
-                        'test_loss': test_loss,
-                        'evaluation_loss': eval_loss,
-                    },
-                    metric=eval_loss,
+                    save_info=save_info,
+                    metric=metric,
                 )
 
     @staticmethod
@@ -141,41 +139,48 @@ class Trainer:
         Trainer.summarize(mdl, sample_input, device)
 
         for epoch in range(config.epochs):
-            train_loss = Trainer.train_loop(
-                mdl,
-                opt,
-                epoch,
-                train_dl,
-                loss_func,
-                logger,
-                config,
-            )
-            test_loss = Trainer.test_loop(
-                mdl,
-                epoch,
-                test_dl,
-                loss_func,
-                logger,
-                config,
-            )
-            eval_loss = Trainer.evaluation_loop(
-                mdl,
-                epoch,
-                eval_dl,
-                loss_func,
-                logger,
-                config,
-            )
+            save_info = {
+                'train_loss': Trainer.train_loop(
+                    mdl,
+                    opt,
+                    epoch,
+                    train_dl,
+                    loss_func,
+                    logger,
+                    config,
+                ),
+            }
+            if test_dl is not None:
+                save_info['test_loss'] = Trainer.test_loop(
+                    mdl,
+                    epoch,
+                    test_dl,
+                    loss_func,
+                    logger,
+                    config,
+                )
+            if eval_dl is not None:
+                save_info['eval_loss'] = Trainer.evaluation_loop(
+                    mdl,
+                    epoch,
+                    eval_dl,
+                    loss_func,
+                    logger,
+                    config,
+                )
+            if 'eval_loss' in save_info:
+                metric = save_info['eval_loss']
+            elif 'test_loss' in save_info:
+                metric = save_info['test_loss']
+            else:
+                metric = save_info['train_loss']
+
             logger.save_model(
                 epoch,
                 mdl,
                 opt,
-                save_info={
-                    'train_loss': train_loss,
-                    'test_loss': test_loss,
-                    'evaluation_loss': eval_loss,
-                },
-                metric=eval_loss,
+                save_info=save_info,
+                metric=metric,
             )
 
     @staticmethod

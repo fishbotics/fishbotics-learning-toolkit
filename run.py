@@ -27,7 +27,7 @@ from src import (
 
 def create_model(config):
     model_type = eval(f"model.{config.model_type}")
-    mdl = model_type(**config.model_parameters)
+    mdl = model_type(**(config.model_parameters or {}))
 
     if 'bootstrap_model_file' in config:
         # TODO fix this
@@ -52,35 +52,45 @@ def create_model(config):
 
 def get_dataloaders(config):
     train_loader = eval(f"data_loader.{config.train_data_loader_type}")
-    test_loader = eval(f"data_loader.{config.test_data_loader_type}")
-    eval_loader = eval(f"data_loader.{config.eval_data_loader_type}")
+
     train_dl = train_loader.get_dataloader(
         directory=config.data_directory,
         batch_size=config.batch_size,
         acquire_test_dataset=False,
         shuffle=True,
         mini=config.mini,
-        **config.data_loader_parameters.all,
-        **config.data_loader_parameters.train,
+        **(config.data_loader_parameters.all or {}),
+        **(config.data_loader_parameters.train or {}),
     )
-    test_dl = test_loader.get_dataloader(
-        directory=config.data_directory,
-        batch_size=config.batch_size,
-        acquire_test_dataset=True,
-        shuffle=False,
-        mini=config.mini,
-        **config.data_loader_parameters.all,
-        **config.data_loader_parameters.test,
-    )
-    eval_dl = eval_loader.get_dataloader(
-        directory=config.data_directory,
-        batch_size=config.batch_size,
-        acquire_test_dataset=True,
-        shuffle=False,
-        mini=config.mini,
-        **config.data_loader_parameters.all,
-        **config.data_loader_parameters.eval,
-    )
+
+    if config.test_data_loader_type is not None:
+        test_loader = eval(f"data_loader.{config.test_data_loader_type}")
+        test_dl = test_loader.get_dataloader(
+            directory=config.data_directory,
+            batch_size=config.batch_size,
+            acquire_test_dataset=True,
+            shuffle=False,
+            mini=config.mini,
+            **(config.data_loader_parameters.all or {}),
+            **(config.data_loader_parameters.test or {}),
+        )
+    else:
+        test_dl = None
+
+    if config.eval_data_loader_type is not None:
+        eval_loader = eval(f"data_loader.{config.eval_data_loader_type}")
+        eval_dl = eval_loader.get_dataloader(
+            directory=config.data_directory,
+            batch_size=config.batch_size,
+            acquire_test_dataset=True,
+            shuffle=False,
+            mini=config.mini,
+            **(config.data_loader_parameters.all or {}),
+            **(config.data_loader_parameters.eval or {}),
+        )
+    else:
+        eval_dl = None
+
     return train_dl, test_dl, eval_dl
 
 
@@ -102,7 +112,7 @@ def run(config):
         loss_function,
         'multigpu_parameters' in config,
     )
-    trainer.fit(train_dl, test_dl, eval_dl, config)
+    trainer.fit(train_dl, config, test_dl=test_dl, eval_dl=eval_dl)
 
 
 def check_for_uncommitted_changes():
