@@ -40,9 +40,7 @@ This was originally designed for robot control, where you might train and test w
 Practically speaking, this means that training has three phases, where one is much much more expensive. And, the [model class](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/model.py) has a flag (called `rollout_mode`, which changes the behavior of the model 
 to do the more expensive thing, such as doing a full motion rollout instead of a truncated rollout.
 
-If you don't care about having three phases in the model, you can disable the more expensive phase by commenting out _all_ calls to `Trainer.evaluation_loop` ([an example](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/train.py#L109)) and the resulting `eval_loss` ([an example](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/train.py#L124))
- in [`train.py`](https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/train.py).
-I realize this is pretty yucky, and will make it a little more user friendly at some point if other people decide to use this library.
+The config file will determine which phases are run in training. You always must add a `train_data_loader_type` to the config because you need something to train with. But, the `eval_data_loader_type` and `test_data_loader_type` are optional. If you specify both, you will get all three phases of training. If you only specify one, you will one use one. If you specify neither, the system will only train without ever validating. When the "best" model is saved, "best" will be determined by the evaluation loss if it exists. If it doesn't, it will use the test loss if that exists. And if that doesn't exist, it will use the training loss.
 
 ### Logging
 This is all managed through the (logging.py)[https://github.com/fishbotics/fishbotics-learning-toolkit/blob/main/src/logging.py] file. Checkpoints with limited metrics are made every so often (as indicated in the config), as well as after each epoch. 
